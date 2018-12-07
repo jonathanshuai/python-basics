@@ -1,80 +1,79 @@
 import numpy as np
-from sklearn.linear_model import LinearRegression
 
 class MyLinearRegression():
-    def __init__(self, learning_rate=1e-2, epsilon=1e-7):
+    def __init__(self, learning_rate=1e-2, tol=1e-7):
         self.learning_rate = learning_rate
-        self.epsilon = epsilon
+        self.tol = tol
 
     def fit(self, X, y):
         self.X = X
         self.y = y
 
-        assert (X.shape[0] == y.shape[0])
+        assert self.X.shape[0] == self.y.shape[0]
 
-        self.theta = np.random.randn(X.shape[1], 1)
+        self.theta = np.random.randn(X.shape[1])
         self.intercept = np.random.randn()
 
-        # Initialize loss for current parameters
-        fx = self.predict(self.X)
-        previous_loss = 0
-        current_loss = self.mse(fx)
-        delta_loss = current_loss
+        prev_error = 0
+        current_error = self._error()
+        delta_error = current_error
+       
+        while delta_error > self.tol:
+            self._gradient_descent()
 
-        n_iters = 0;
-        # Repeat until convergence is met
-        while delta_loss > self.epsilon:
-            n_iters += 1
-            # Do gradient descent step
-            self.gradient_descent(fx)
-            fx = self.predict(self.X)
+            prev_error = current_error
+            current_error = self._error()
+            delta_error = prev_error - current_error
 
-            # Calculate new loss
-            previous_loss = current_loss
-            current_loss = self.mse(fx)
-            delta_loss = previous_loss - current_loss
 
-        print(n_iters)
 
     def predict(self, X):
-        assert X.shape[1] == self.theta.shape[0]
-        return np.dot(X, self.theta) + self.intercept
+        assert X.shape[1] == self.X.shape[1]
+        return X.dot(self.theta) + self.intercept
 
 
-    def gradient_descent(self, fx):
-        diff = fx - self.y
-        grad = np.dot(self.X.T, diff)
-        # print(grad)
-        self.theta -= self.learning_rate * np.dot(self.X.T, diff)
-        self.intercept -= self.learning_rate * np.sum(diff)
+    def _gradient_descent(self):
+        pred = self.predict(self.X)
+        l1_distance = pred - self.y
 
-    def mse(self, fx):
-        return np.mean((fx - self.y) ** 2)
+        theta_update = self.learning_rate * (self.X.T.dot(l1_distance))
+        intercept_update = self.learning_rate * l1_distance.sum()
 
-m = 5
-p = 2
+        print(theta_update)
+        print(intercept_update)
 
-np.random.seed(1)
-X = np.random.randn(m, p)
+        self.theta -= theta_update
+        self.intercept -= intercept_update
+
+    def _error(self):
+        return np.mean((self.predict(self.X) - self.y) ** 2)
+
+np.random.seed(0)
+
+X = np.random.randn(25, 2)
 X.sort(0)
-y = np.random.randn(m, 1)
-y.sort(0)
-
-mlr = MyLinearRegression()
-mlr.fit(X, y)
-mlr_predictions = mlr.predict(X)
-print(mlr_predictions)
-print(mlr.theta)
+y = np.random.randn(25) * 5
+y.sort()
 
 
-X[:, 1] *= 100
-mlr = MyLinearRegression(learning_rate=1e-5)
-mlr.fit(X, y)
-mlr_predictions = mlr.predict(X)
-print(mlr_predictions)
-print(mlr.theta)
+lr1 = MyLinearRegression(learning_rate=1e-2)
+lr2 = MyLinearRegression(learning_rate=1e-2)
+lr1.X = X
+lr1.y = y
 
-lr = LinearRegression()
-lr.fit(X, y)
-lr_predictions = lr.predict(X)
-print(lr_predictions)
+lr1.theta = np.random.randn(X.shape[1])
+lr1.intercept = np.random.randn()
+
+lr2.X = X.copy()
+lr2.y = y.copy()
+lr2.X[:, 1] *= 100
+
+lr2.theta = lr1.theta.copy()
+lr2.theta[1] /= 100
+lr2.intercept = lr1.intercept
+
+lr1._gradient_descent()
+print(lr1.intercept)
+lr2._gradient_descent()
+print(f'lr1 theta: {lr1.theta}, lr1 intercept: {lr1.intercept}')
+print(f'lr2 theta: {lr2.theta}, lr2 intercept: {lr2.intercept}')
